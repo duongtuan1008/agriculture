@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F1F6F9"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:padding="20dp"
+        android:elevation="4dp"
+        android:clipToPadding="false"
+        android:layout_marginBottom="24dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp">
+
+        <!-- Switch chế độ tự động -->
+        <Switch
+            android:id="@+id/switchAuto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:padding="8dp"
+            android:text="Chế độ tưới tự động"
+            android:textColor="#333" />
+
+        <!-- Ngưỡng độ ẩm -->
+        <TextView
+            android:id="@+id/txtThreshold"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ngưỡng độ ẩm: 2000"
+            android:textColor="#333"
+            android:textSize="16sp"
+            android:layout_marginTop="16dp" />
+
+        <SeekBar
+            android:id="@+id/seekThreshold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:max="4095" />
+
+        <!-- Time Picker -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Thời gian bắt đầu tưới"
+            android:textColor="#333"
+            android:layout_marginTop="16dp" />
+
+        <TimePicker
+            android:id="@+id/timePicker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_gravity="center_horizontal" />
+
+        <!-- Chọn ngày -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chọn ngày tưới:"
+            android:textColor="#333"
+            android:layout_marginTop="16dp" />
+
+        <LinearLayout
+            android:id="@+id/layoutDays"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal" />
+
+        <!-- Nhập thời gian tưới -->
+        <EditText
+            android:id="@+id/editThreshold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Lượng nước cần tưới (mL)"
+            android:inputType="number"
+            android:minHeight="48dp"
+            android:textColor="@android:color/black" />
+
+        <!-- Nút lưu -->
+        <Button
+            android:id="@+id/btnSave"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="LƯU CẤU HÌNH"
+            android:background="@drawable/bg_button_green"
+            android:textColor="@android:color/white"
+            android:layout_marginTop="16dp"/>
+
+        <Button
+            android:id="@+id/btnCancelEdit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="THÊM MỚI"
+            android:background="@drawable/bg_button_gray"
+            android:textColor="@android:color/white"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"/>
+
+        <!-- Nhãn lịch tưới -->
+        <TextView
+            android:id="@+id/txtScheduleLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Lịch tưới đã lưu:"
+            android:textColor="#333"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/layoutSchedules"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+
+    </LinearLayout>
+</ScrollView>

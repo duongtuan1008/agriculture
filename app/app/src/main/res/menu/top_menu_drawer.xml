@@ -1,0 +1,18 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_home"
+        android:title="🏠 Trang chủ"
+        android:icon="@drawable/ic_home" />
+    <item
+        android:id="@+id/nav_pump"
+        android:title="🚿 Máy bơm tự động"
+        android:icon="@drawable/ic_pump_on" />
+    <item
+        android:id="@+id/nav_settings"
+        android:title="⚙️ Cài đặt"
+        android:icon="@drawable/ic_setting" />
+    <item
+        android:id="@+id/nav_about"
+        android:title="ℹ️ Thông tin"
+        android:icon="@drawable/ic_infor" />
+</menu>

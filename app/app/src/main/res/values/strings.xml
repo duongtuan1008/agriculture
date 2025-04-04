@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">Hachi</string>
+    <string name="open">Mở menu</string>
+    <string name="close">Đóng menu</string>
+    <string name="btn_mode">CHẾ ĐỘ TUỲ CHỌN</string>
+    <string name="pump_control">Công tắc máy bơm</string>
+    <string name="led_control">Công tắc đèn LED</string>
+    <string name="water_temp">Nhiệt độ nước</string>
+    <string name="air_temp">Nhiệt độ không khí</string>
+    <string name="humidity_air">Độ ẩm không khí</string>
+    <string name="humidity_soil">Độ ẩm giá thể</string>
+    <string name="ph_level">Nồng độ pH</string>
+    <string name="nutrient">Nồng độ\nDINH DƯỠNG</string>
+    <string name="ppm">667 PPM</string>
+    <string name="switch_cover_text">Bật/Tắt màn che</string>
+    <string name="menu_settings">Cài đặt</string>
+    <string name="menu_about">Thông tin</string>
+    <string name="menu_title">📂 Menu</string>
+    <string name="auto_mode">Chế độ tưới tự động</string>
+    <string name="threshold_label">Ngưỡng độ ẩm: 3000</string>
+    <string name="select_days">Chọn ngày tưới:</string>
+    <string name="duration_hint">Thời gian tưới (giây)</string>
+    <string name="btn_save">LƯU CẤU HÌNH</string>
+    <string name="saved_schedule_label">Lịch tưới đã lưu:</string>
+</resources>

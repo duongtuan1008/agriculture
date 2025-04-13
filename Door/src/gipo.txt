@@ -1,0 +1,41 @@
+1️⃣ Màn hình OLED 0.91 inch (SSD1306)
+Giao tiếp: I2C
+Chân kết nối với ESP32
+SDA → GPIO 21
+SCL → GPIO 22
+2️⃣ Module RFID RC522
+Giao tiếp: SPI
+Chân kết nối với ESP32
+SDA/SS → GPIO 5
+SCK → GPIO 18
+MOSI → GPIO 23
+MISO → GPIO 19
+RST → GPIO 2
+VCC → 3.3V
+GND → GND
+3️⃣ Stepper Motor (28BYJ-48)
+Driver: ULN2003
+Chân kết nối với ESP32
+IN1 → GPIO 32
+IN2 → GPIO 33
+IN3 → GPIO 25
+IN4 → GPIO 26
+VCC → 5V
+GND → GND
+4️⃣ Keypad 4x4
+Giao tiếp: GPIO Digital
+Chân kết nối với ESP32
+ROW1 → GPIO 13
+ROW2 → GPIO 12
+ROW3 → GPIO 14
+ROW4 → GPIO 27
+COL1 → GPIO 16
+COL2 → GPIO 17
+COL3 → GPIO 4
+COL4 → GPIO 15
+5️⃣ Nguồn cấp
+ESP32 → 5V (hoặc 3.3V tùy board)
+RFID RC522 → 3.3V
+OLED → 3.3V hoặc 5V
+Stepper Motor → 5V (qua ULN2003)
+Keypad → Không cần nguồn, chỉ kết nối GPIO

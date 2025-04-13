@@ -22,4 +22,17 @@
     <string name="duration_hint">Thời gian tưới (giây)</string>
     <string name="btn_save">LƯU CẤU HÌNH</string>
     <string name="saved_schedule_label">Lịch tưới đã lưu:</string>
+    <string name="login_title">Đăng Nhập</string>
+    <string name="login_button">Đăng Nhập</string>
+    <string name="login_email_hint">Email</string>
+    <string name="login_password_hint">Mật khẩu</string>
+    <string name="login_register_prompt">Chưa có tài khoản? Đăng ký</string>
+    <!-- Đăng ký -->
+    <string name="register_title">Đăng Ký</string>
+    <string name="register_email_hint">Email</string>
+    <string name="register_password_hint">Mật khẩu</string>
+    <string name="register_button">Đăng Ký</string>
+    <string name="navigation_drawer_open">Mở menu</string>
+    <string name="navigation_drawer_close">Đóng menu</string>
+
 </resources>

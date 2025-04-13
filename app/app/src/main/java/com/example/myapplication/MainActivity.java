@@ -77,24 +77,51 @@ public class MainActivity extends AppCompatActivity {
         switchPump = findViewById(R.id.switchPump);
         switchLed = findViewById(R.id.switchLed);
 
+        drawerLayout = findViewById(R.id.drawer_layout);
+        setSupportActionBar(toolbar);
+
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle("Hachi");
+        }
+
+// Thêm sự kiện mở drawer khi click vào nút trên Toolbar
+        toolbar.setNavigationOnClickListener(v -> {
+            drawerLayout.openDrawer(GravityCompat.END);
+        });
+
+
+
         // Trạng thái ban đầu của màn che
         txtCoverStatus.setText("🛡️ Màn che: Đóng");
         switchCover.setChecked(true);
         setSupportActionBar(toolbar);
         // Xử lý khi chọn menu trong nav drawer
-        toolbar.setNavigationOnClickListener(v -> {
-            drawerLayout.openDrawer(GravityCompat.START);
-        });
         navigationView.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
                 Toast.makeText(this, "Trang chủ", Toast.LENGTH_SHORT).show();
-            } else if (id == R.id.nav_settings) {
-                Toast.makeText(this, "Cài đặt", Toast.LENGTH_SHORT).show();
             } else if (id == R.id.nav_pump) {
                 Intent intent = new Intent(MainActivity.this, PumpActivity.class);
                 startActivity(intent);
             }
+            else if (id == R.id.nav_door) {
+                Intent intent = new Intent(MainActivity.this, DoorActivity.class);
+                startActivity(intent);
+            }
+            else if (id == R.id.nav_logout) {
+                // ✅ Đặt lại trạng thái chưa đăng nhập
+                getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                        .edit()
+                        .putBoolean("isLoggedIn", false)
+                        .apply();
+
+                // ✅ Chuyển về màn hình đăng nhập
+                Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+                startActivity(intent);
+                finish(); // đóng MainActivity để không quay lại được
+            }
+
+
             drawerLayout.closeDrawer(GravityCompat.END); // ✅ đúng với menu bên phải
             return true;
         });
@@ -103,11 +130,11 @@ public class MainActivity extends AppCompatActivity {
             if (isChecked) {
                 txtCoverStatus.setText("🛡️ Màn che: Đóng");
                 Toast.makeText(this, "Đã đóng màn che", Toast.LENGTH_SHORT).show();
-                // TODO: Gửi lệnh đến server hoặc thiết bị
+                sendControlCommand("curtain", "ON");  // Gửi lệnh mở màn che (ON)
             } else {
                 txtCoverStatus.setText("🛡️ Màn che: Mở");
                 Toast.makeText(this, "Đã mở màn che", Toast.LENGTH_SHORT).show();
-                // TODO: Gửi lệnh đến server hoặc thiết bị
+                sendControlCommand("curtain", "OFF"); // Gửi lệnh đóng màn che (OFF)
             }
         });
         switchPump.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -141,24 +168,33 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Gọi API
-        fetchSensorData();
+        // ⚡ Tự động cập nhật dữ liệu cảm biến mỗi 5 giây
+        new android.os.Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                fetchSensorData(); // Gọi lại API lấy dữ liệu mới
+                new android.os.Handler().postDelayed(this, 5000); // Lặp lại sau 5s
+            }
+        }, 5000); // Đợi 5s trước lần đầu
+
         fetchDeviceStates(); // sau khi POST xong
 
     }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        Log.d("MENU_TEST", "onCreateOptionsMenu đang chạy");
         getMenuInflater().inflate(R.menu.top_menu, menu);
         return true;
     }
+
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == R.id.menu_drawer) {
-            drawerLayout.openDrawer(GravityCompat.END); // mở drawer bên phải
+            drawerLayout.openDrawer(GravityCompat.END); // ✅ Mở menu bên phải
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
+
 
     private void sendControlCommand(String device, String command) {
         APIService api = RetrofitClientRaspi.getClient().create(APIService.class);
@@ -271,6 +307,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = "Cảnh báo cảm biến";
@@ -338,6 +375,7 @@ public class MainActivity extends AppCompatActivity {
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
         notificationManager.notify(1001, builder.build());
     }
+
 
 
 }

@@ -8,6 +8,7 @@ import retrofit2.http.POST;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.Field;
 import retrofit2.http.Query;
+import retrofit2.http.Body;
 
 import okhttp3.ResponseBody;
 
@@ -49,5 +50,7 @@ public interface APIService {
             @Field("device") String device,
             @Field("state") String state
     );
+    @POST("user.php") // nếu API bạn đặt là http://192.168.x.x/api/user.php
+    Call<UserResponse> processUser(@Body UserRequest request);
 
 }

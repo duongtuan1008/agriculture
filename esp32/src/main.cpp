@@ -68,6 +68,7 @@ int pumpStartHour = 6;
 int pumpStartMinute = 30;
 
 bool pumpRunning = false;
+bool curtainRunning = false;
 unsigned long pumpStartTime = 0;
 
 float temperature = 0.0, humidity = 0.0, lightLevel = 0.0;
@@ -99,6 +100,7 @@ int lastScheduleDay = -1; // thêm biến ngày trong tuần
 #define PUMP_RELAY 13
 #define TOUCH_LED_PIN 16 // Cảm biến chạm bật/tắt đèn
 #define LED_PIN 17       // Chân điều khiển đèn (thường dùng GPIO2)
+#define CURTAIN_PIN 19
 
 #define SOIL_SENSOR_PIN 34
 #define LDR_PIN 34
@@ -370,6 +372,24 @@ void setPump(bool on)
                 on ? "🚿 Pump ON" : "🛑 Pump OFF", PUMP_RELAY, digitalRead(PUMP_RELAY));
   lastState = on;
 }
+void setCurtain(bool on)
+{
+  static bool lastState = false;
+  if (on == lastState)
+    return; // ⛔ Không làm gì nếu trạng thái không thay đổi
+
+  // Điều khiển GPIO 19
+  digitalWrite(CURTAIN_PIN, on ? HIGH : LOW); // Kiểm tra lại HIGH/LOW
+  curtainRunning = on;
+
+  // Kiểm tra và in ra thông báo để xác nhận trạng thái của rèm
+  Serial.printf("%s | GPIO %d trạng thái: %d\n",
+                on ? "🪟 Curtain OPEN" : "🛑 Curtain CLOSE",
+                CURTAIN_PIN,
+                digitalRead(CURTAIN_PIN)); // In trạng thái GPIO 19
+
+  lastState = on;
+}
 
 void handleSchedulePost()
 {
@@ -561,7 +581,7 @@ void getControlFromServer()
   {
     HTTPClient http;
     String url = "http://192.168.137.74/api/pump-command.php?rand=" + String(random(1000, 9999));
-    http.begin(url); // chống cache
+    http.begin(url); // Chống cache
     int code = http.GET();
 
     if (code == 200)
@@ -582,7 +602,7 @@ void getControlFromServer()
       }
 
       // ✅ Xử lý trạng thái máy bơm
-      String pumpState = doc["pump"] | "OFF";
+      String pumpState = doc["pump"] | "OFF"; // Trạng thái máy bơm
       if (pumpState == "ON" && !pumpRunning)
       {
         setPump(true);
@@ -594,8 +614,21 @@ void getControlFromServer()
         Serial.println("🛑 Bơm được tắt từ server");
       }
 
-      // ✅ XỬ LÝ ĐÈN LED TỪ SERVER
-      String ledServerState = doc["led"] | "OFF";
+      // ✅ Xử lý trạng thái rèm
+      String curtainState = doc["curtain"] | "OFF"; // Trạng thái rèm
+      if (curtainState == "ON" && !curtainRunning)
+      {
+        setCurtain(true);
+        Serial.println("🪟 Rèm được mở từ server");
+      }
+      else if (curtainState == "OFF" && curtainRunning)
+      {
+        setCurtain(false);
+        Serial.println("🪟 Rèm được đóng từ server");
+      }
+
+      // ✅ Xử lý đèn LED từ server
+      String ledServerState = doc["led"] | "OFF"; // Trạng thái đèn LED
       bool shouldLedBeOn = (ledServerState == "ON");
 
       if (shouldLedBeOn != ledState)
@@ -617,6 +650,7 @@ void getControlFromServer()
     Serial.println("🚫 ESP32 chưa kết nối WiFi");
   }
 }
+
 // ✅ Gửi dữ liệu lên server
 void sendSensorData()
 {
@@ -955,6 +989,8 @@ void setup()
   pinMode(TOUCH_LED_PIN, INPUT_PULLDOWN); // 👈 Bắt buộc
   pinMode(LED_PIN, OUTPUT);               // 👈 để điều khiển LED
   digitalWrite(LED_PIN, LOW);             // 👈 tắt LED ban đầu
+  pinMode(CURTAIN_PIN, OUTPUT);           // 👈 để điều khiển LED
+  digitalWrite(CURTAIN_PIN, LOW);
   // ⏬ Tải lịch từ server và nạp vào RAM
   downloadScheduleFromServer(); // gọi luôn cả loadSchedules()
 }
@@ -973,8 +1009,7 @@ void loop()
     lastSendTime = now;
   }
 
-  // ✅ Lấy lệnh từ app liên tục (mỗi 1 giây)
-  if (now - lastUpdate > 10000)
+  if (now - lastUpdate > 1000) // 1000ms = 1 giây
   {
     getControlFromServer();
     lastUpdate = now;

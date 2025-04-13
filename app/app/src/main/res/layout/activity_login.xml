@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_gradient"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/login_title"
+        android:textSize="24sp"
+        android:textColor="@android:color/white"
+        android:layout_marginBottom="24dp"
+        android:layout_gravity="center" />
+
+    <EditText
+        android:id="@+id/edtEmail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/login_email_hint"
+        android:inputType="textEmailAddress"
+        android:autofillHints="emailAddress"
+        android:background="@drawable/bg_input"
+        android:padding="12dp"
+        android:textColor="#000"
+        android:layout_marginBottom="12dp" />
+
+    <EditText
+        android:id="@+id/edtPassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/login_password_hint"
+        android:inputType="textPassword"
+        android:autofillHints="password"
+        android:background="@drawable/bg_input"
+        android:padding="12dp"
+        android:textColor="#000"
+        android:layout_marginBottom="16dp" />
+
+    <Button
+        android:id="@+id/btnLogin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/login_button"
+        android:textColor="@android:color/white"
+        android:background="@drawable/bg_button_green"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:id="@+id/txtRegister"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/login_register_prompt"
+        android:textColor="@android:color/white"
+        android:layout_gravity="center" />
+</LinearLayout>

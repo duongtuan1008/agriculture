@@ -27,7 +27,24 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import com.google.gson.Gson;
 import java.io.IOException;
+import androidx.appcompat.widget.Toolbar;
+import androidx.drawerlayout.widget.DrawerLayout;
+import com.google.android.material.navigation.NavigationView;
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import android.content.Intent;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+
+import com.google.android.material.navigation.NavigationView;
+import com.google.android.material.appbar.MaterialToolbar;
 
 
 public class PumpActivity extends AppCompatActivity {
@@ -40,6 +57,7 @@ public class PumpActivity extends AppCompatActivity {
     EditText editThreshold;
     private int editingScheduleId = -1; // -1 nghĩa là đang thêm mới
     ArrayList<TextView> dayViews = new ArrayList<>();
+
     int threshold = 3000;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +79,45 @@ public class PumpActivity extends AppCompatActivity {
         // Cập nhật hiển thị ngưỡng độ ẩm khi kéo SeekBar
         layoutSchedules = findViewById(R.id.layoutSchedules);
         seekThreshold.setProgress(threshold);
+
+        DrawerLayout drawerLayout = findViewById(R.id.drawerLayoutPump);
+        NavigationView navView = findViewById(R.id.navigationViewPump);
+        MaterialToolbar toolbar = findViewById(R.id.toolbarPump);
+        setSupportActionBar(toolbar);
+
+// Bấm icon ba chấm → mở menu
+        toolbar.setNavigationOnClickListener(v -> {
+            drawerLayout.openDrawer(GravityCompat.END);
+        });
+
+// Xử lý chọn menu
+        navView.setNavigationItemSelectedListener(item -> {
+            int id = item.getItemId();
+
+            if (id == R.id.nav_home) {
+                startActivity(new Intent(PumpActivity.this, MainActivity.class));
+                finish();
+            } else if (id == R.id.nav_pump) {
+                Toast.makeText(this, "Bạn đang ở Bơm nước", Toast.LENGTH_SHORT).show();
+            } else if (id == R.id.nav_door) {
+                startActivity(new Intent(PumpActivity.this, DoorActivity.class));
+            } else if (id == R.id.nav_logout) {
+                // ✅ Đăng xuất và quay về login
+                getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                        .edit().putBoolean("isLoggedIn", false)
+                        .apply();
+                startActivity(new Intent(PumpActivity.this, LoginActivity.class));
+                finish();
+            }
+
+            drawerLayout.closeDrawer(GravityCompat.END);
+            return true;
+        });
+
+
+
+// Xử lý chọn mục trong men
+
         txtThreshold.setText("Lượng nước cần tưới (mL): " + threshold);
         seekThreshold.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -139,6 +196,21 @@ public class PumpActivity extends AppCompatActivity {
         loadConfigFromServer();
         fetchSchedules();
     }
+
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.top_menu, menu);
+        return true;
+    }
+
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.menu_drawer) {
+            DrawerLayout drawerLayout = findViewById(R.id.drawerLayoutPump);
+            drawerLayout.openDrawer(GravityCompat.END);
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
 
     private void sendToServer(boolean auto, int threshold, int hour, int minute, int duration, String repeatDays) {
         new Thread(() -> {

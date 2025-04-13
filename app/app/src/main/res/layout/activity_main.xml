@@ -1,51 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-    <androidx.drawerlayout.widget.DrawerLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        xmlns:tools="http://schemas.android.com/tools"
-        android:id="@+id/drawer_layout"
+<androidx.drawerlayout.widget.DrawerLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:fitsSystemWindows="true">
+
+    <!-- Layout chính -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fitsSystemWindows="true"
-        tools:context=".MainActivity">
 
-        <!-- Phần nội dung chính -->
-        <LinearLayout
-            android:clipToPadding="false"
+        android:orientation="vertical">
+
+        <!-- Toolbar -->
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            android:title="Hachi"
+            android:titleTextColor="@android:color/white"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+
+        <!-- Nội dung chính cuộn được -->
+        <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:fitsSystemWindows="true"
-            android:background="@drawable/bg_gradient">
+            android:padding="24dp"
+            android:background="#F1F6F9">
 
-            <!-- Toolbar -->
-            <com.google.android.material.appbar.MaterialToolbar
-                android:id="@+id/toolbar"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:background="?attr/colorPrimary"
-                android:title="Hachi"
-                android:titleTextColor="@android:color/white"
-                app:titleCentered="false"
-                app:menu="@menu/top_menu" />
-            <!-- Nội dung cuộn -->
-            <ScrollView
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:padding="16dp">
-
-                <!-- Layout chứa nội dung -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <ScrollView
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:padding="12dp">
-
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
                         <!-- TOÀN BỘ PHẦN ConstraintLayout bạn đã có -->
                         <!-- Không thay đổi nội dung bên trong -->
 
@@ -81,7 +71,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:text="☁  24°"
-                                        android:textColor="#FFFFFF"
+                                        android:textColor="#000"
                                         android:textSize="36sp"
                                         android:textStyle="bold" />
 
@@ -89,7 +79,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:text="Nhiệt độ không khí"
-                                        android:textColor="#FFFFFF"
+                                        android:textColor="#000"
                                         android:textSize="14sp" />
                                 </LinearLayout>
                             </androidx.cardview.widget.CardView>
@@ -121,7 +111,7 @@
                                         android:layout_height="wrap_content"
                                         android:text="63%"
 
-                                        android:textColor="#FFFFFF"
+                                        android:textColor="#000"
                                         android:textSize="20sp"
                                         android:textStyle="bold" />
 
@@ -129,7 +119,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:text="Độ ẩm không khí"
-                                        android:textColor="#FFFFFF"
+                                        android:textColor="#000"
                                         android:textSize="12sp" />
                                 </LinearLayout>
                             </androidx.cardview.widget.CardView>
@@ -160,7 +150,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:text="87%"
-                                        android:textColor="#FFFFFF"
+                                        android:textColor="#000"
                                         android:textSize="20sp"
                                         android:textStyle="bold" />
 
@@ -168,7 +158,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:text="Độ ẩm giá thể"
-                                        android:textColor="#FFFFFF"
+                                        android:textColor="#000"
                                         android:textSize="12sp" />
                                 </LinearLayout>
                             </androidx.cardview.widget.CardView>
@@ -201,7 +191,7 @@
                                         android:layout_height="wrap_content"
                                         android:id="@+id/text_light"
                                         android:text="25°"
-                                        android:textColor="#FFFFFF"
+                                        android:textColor="#000"
                                         android:textSize="20sp"
                                         android:textStyle="bold" />
 
@@ -209,7 +199,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:text="Cường độ ánh sáng"
-                                        android:textColor="#FFFFFF"
+                                        android:textColor="#000"
                                         android:textSize="12sp" />
                                 </LinearLayout>
                             </androidx.cardview.widget.CardView>
@@ -256,7 +246,7 @@
                                             android:layout_width="0dp"
                                             android:layout_height="wrap_content"
                                             android:text="Máy bơm"
-                                            android:textColor="@android:color/white"
+                                            android:textColor="@android:color/black"
                                             android:textSize="16sp"
                                             android:layout_weight="1" />
 
@@ -286,7 +276,7 @@
                                             android:layout_width="0dp"
                                             android:layout_height="wrap_content"
                                             android:text="Đèn LED"
-                                            android:textColor="@android:color/white"
+                                            android:textColor="@android:color/black"
                                             android:textSize="16sp"
                                             android:layout_weight="1" />
 
@@ -325,7 +315,7 @@
 
                                     <TextView
                                         android:text="5.8"
-                                        android:textColor="#FFFFFF"
+                                        android:textColor="#000"
                                         android:textSize="20sp"
                                         android:textStyle="bold"
                                         android:layout_width="wrap_content"
@@ -369,7 +359,7 @@
                                             android:layout_weight="1"
                                             android:text="☁️ Trời khô ráo"
                                             android:textSize="14sp"
-                                            android:textColor="@android:color/white" />
+                                            android:textColor="@android:color/black" />
 
                                         <TextView
                                             android:id="@+id/txtCoverStatus"
@@ -377,7 +367,7 @@
                                             android:layout_height="wrap_content"
                                             android:text="🛡️ Màn che: Đóng"
                                             android:textSize="14sp"
-                                            android:textColor="@android:color/white" />
+                                            android:textColor="@android:color/black" />
                                     </LinearLayout>
 
                                     <!-- Nút bật/tắt màn che -->
@@ -389,7 +379,7 @@
                                         android:checked="false"
                                         android:minHeight="48dp"
                                         android:text="Bật/Tắt màn che"
-                                        android:textColor="@android:color/white"
+                                        android:textColor="@android:color/black"
                                         tools:ignore="TouchTargetSizeCheck" />
                                 </LinearLayout>
 
@@ -409,22 +399,18 @@
                                 app:layout_constraintStart_toStartOf="parent"
                                 app:layout_constraintEnd_toEndOf="parent" />
                         </androidx.constraintlayout.widget.ConstraintLayout>
-                    </ScrollView>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
 
-                </LinearLayout>
-            </ScrollView>
-        </LinearLayout>
-
-        <!-- Menu trượt từ trái -->
+    <!-- Menu trượt trái -->
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/navigation_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"
-        app:menu="@menu/top_menu_drawer"
-        android:background="@android:color/white" />
-
-
-
+        android:fitsSystemWindows="false"
+        app:insetForeground="@null"
+        android:background="@android:color/white"
+        app:menu="@menu/top_menu_drawer" />
 </androidx.drawerlayout.widget.DrawerLayout>
-    <!-- Nội dung chính có thể cuộn -->

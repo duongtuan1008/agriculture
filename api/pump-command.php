@@ -25,13 +25,26 @@ if ($mysqli->connect_error) {
 // 📤 POST: Cập nhật trạng thái thiết bị
 // =====================
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $device = $_POST['device'] ?? '';
-    $state  = $_POST['state'] ?? '';
+    // Lấy dữ liệu JSON từ body yêu cầu
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    // Kiểm tra nếu dữ liệu JSON hợp lệ
+    if ($data === null) {
+        http_response_code(400);
+        echo json_encode([ // Trả về lỗi nếu JSON không hợp lệ
+            "status" => "error",
+            "message" => "Dữ liệu JSON không hợp lệ"
+        ]);
+        exit;
+    }
+
+    $device = $data['device'] ?? '';  // Lấy thông tin thiết bị từ JSON
+    $state  = $data['state'] ?? '';   // Lấy trạng thái của thiết bị từ JSON
 
     // Kiểm tra thiếu thiết bị hoặc trạng thái
     if (empty($device) || empty($state)) {
         http_response_code(400);
-        echo json_encode([
+        echo json_encode([ // Trả về lỗi nếu thiếu device hoặc state
             "status" => "error",
             "message" => "Thiếu device hoặc state"
         ]);
@@ -42,7 +55,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $allowed_devices = ["pump", "led", "curtain"]; // 🆕 Thêm "curtain" vào danh sách thiết bị hợp lệ
     if (!in_array($device, $allowed_devices)) {
         http_response_code(400);
-        echo json_encode([
+        echo json_encode([ // Trả về lỗi nếu thiết bị không hợp lệ
             "status" => "error",
             "message" => "Thiết bị không hợp lệ"
         ]);
@@ -53,7 +66,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt = $mysqli->prepare("REPLACE INTO device_state (device, state) VALUES (?, ?)");
     if (!$stmt) {
         http_response_code(500);
-        echo json_encode([
+        echo json_encode([ // Trả về lỗi nếu lỗi khi chuẩn bị câu lệnh SQL
             "status" => "error",
             "message" => "Lỗi prepare: " . $mysqli->error
         ]);
@@ -64,7 +77,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt->execute();
     $stmt->close();
 
-    echo json_encode([
+    echo json_encode([ // Trả về thông báo thành công khi cập nhật thành công
         "status" => "ok",
         "message" => "$device đã được cập nhật thành $state"
     ]);
@@ -90,7 +103,7 @@ elseif ($_SERVER["REQUEST_METHOD"] === "GET") {
         "curtain" => "OFF"    // 🆕 Mặc định màn che tắt
     ], $states);
 
-    echo json_encode($states);
+    echo json_encode($states); // Trả về trạng thái của tất cả các thiết bị
     exit; // ✅ BẮT BUỘC
 }
 
@@ -98,7 +111,7 @@ elseif ($_SERVER["REQUEST_METHOD"] === "GET") {
 // ❌ Nếu không phải GET hoặc POST
 // =====================
 http_response_code(405);
-echo json_encode([
+echo json_encode([ // Trả về lỗi nếu không phải phương thức GET hoặc POST
     "status" => "error",
     "message" => "Chỉ hỗ trợ POST và GET"
 ]);

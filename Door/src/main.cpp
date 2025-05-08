@@ -18,9 +18,9 @@ LiquidCrystal_I2C lcd(0x27, 20, 4); // Địa chỉ I2C thường là 0x27 hoặ
 const char *ssid = "mypc";
 const char *password_wifi = "11111111";
 
-const char *server_url = "http://192.168.137.74/api/control.php?esp=1";
-const char *server_rfid_url = "http://192.168.137.74/api/rfid.php";
-const char *server_pass_url = "http://192.168.137.74/api/password.php";
+const char *server_url = "http://192.168.137.100/api/control.php?esp=1";
+const char *server_rfid_url = "http://192.168.137.100/api/rfid.php";
+const char *server_pass_url = "http://192.168.137.100/api/password.php";
 String apiKeyValue = "tPmAT5Ab3j7F9";
 
 bool screenUpdated = false;
@@ -246,9 +246,9 @@ void openDoor()
   lcd.print("---OPENDOOR---");
   unsigned char pos;
   delay(1000);
-  sg90.write(180);
-  delay(5000);
   sg90.write(0);
+  delay(5000);
+  sg90.write(180);
   lcd.clear();
   index_t = 0;
 }
@@ -1010,7 +1010,7 @@ void syncFromServer()
 void fetchSchedule()
 {
   HTTPClient http;
-  http.begin("http://192.168.137.74/api/control.php?esp=1");
+  http.begin("http://192.168.137.100/api/control.php?esp=1");
   int httpCode = http.GET();
 
   if (httpCode == 200)
@@ -1101,6 +1101,7 @@ void setup()
     Serial.print("🔑 PASSWORD (Mới): ");
     Serial.println(password);
   }
+  sg90.write(180);
 }
 
 void loop()

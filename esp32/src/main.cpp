@@ -16,11 +16,12 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include <vector>
+#include <ESPAsyncWebServer.h>
 
 // Replace with your network credentials
 const char *ssid = "mypc";
 const char *password = "11111111";
-const char *serverName = "http://192.168.137.74/api/get-data.php";
+const char *serverName = "http://192.168.137.100/api/get-data.php";
 String apiKeyValue = "tPmAT5Ab3j7F9";
 WebServer server(80);
 WiFiUDP ntpUDP;
@@ -35,16 +36,6 @@ BH1750 lightMeter;
 #define TEMP_CELSIUS 1
 
 #define LDR_PIN 34
-
-// Touchscreen pins
-#define XPT2046_IRQ 36  // T_IRQ
-#define XPT2046_MOSI 32 // T_DIN
-#define XPT2046_MISO 39 // T_OUT
-#define XPT2046_CLK 25  // T_CLK
-#define XPT2046_CS 33   // T_CS
-
-SPIClass touchscreenSPI = SPIClass(VSPI);
-XPT2046_Touchscreen touchscreen(XPT2046_CS, XPT2046_IRQ);
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 160
@@ -103,11 +94,10 @@ int lastScheduleDay = -1; // thêm biến ngày trong tuần
 #define CURTAIN_PIN 19
 
 #define SOIL_SENSOR_PIN 34
-#define LDR_PIN 34
 #define SOIL_PIN 35
 #define FLOW_SENSOR_PIN 26
 #define FLAME_SENSOR_D0 27 // đổi từ 32 -> 27
-#define RAIN_SENSOR_PIN 14 // đổi từ 33 -> 14
+#define RAIN_SENSOR_PIN 33 // đổi từ 33 -> 14
 #define BUZZER_PIN 15
 #define FAN_PIN 19
 volatile int flowPulseCount = 0;
@@ -140,39 +130,6 @@ void log_print(lv_log_level_t level, const char *buf)
 }
 
 // Get the Touchscreen data
-void touchscreen_read(lv_indev_t *indev, lv_indev_data_t *data)
-{
-  if (!touchscreen.tirqTouched() || !touchscreen.touched())
-  {
-    data->state = LV_INDEV_STATE_RELEASED;
-    return;
-  }
-
-  TS_Point p = touchscreen.getPoint();
-
-  // Ngăn dữ liệu ảo với áp lực quá cao
-  if (p.z > 1000 || p.z < 10)
-  {
-    data->state = LV_INDEV_STATE_RELEASED;
-    return;
-  }
-
-  // Bạn có thể dùng map() tạm để thử
-  x = map(p.x, 200, 3700, 0, SCREEN_WIDTH - 1);
-  y = map(p.y, 240, 3800, 0, SCREEN_HEIGHT - 1);
-
-  x = constrain(x, 0, SCREEN_WIDTH - 1);
-  y = constrain(y, 0, SCREEN_HEIGHT - 1);
-
-  z = p.z;
-
-  data->state = LV_INDEV_STATE_PRESSED;
-  data->point.x = x;
-  data->point.y = y;
-
-  // DEBUG – in ra nếu thực sự có chạm
-  Serial.printf("X = %d | Y = %d | Pressure = %d\n", x, y, z);
-}
 
 static lv_obj_t *table;
 
@@ -498,6 +455,37 @@ void loadSchedules()
 
   Serial.printf("✅ Đã nạp %d lịch tưới\n", schedules.size());
 }
+void sendPumpStatusToServer(bool pumpOn)
+{
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    HTTPClient http;
+    String url = "http://192.168.137.100/api/pump-command.php"; // Đảm bảo URL này đúng
+    http.begin(url);
+    http.addHeader("Content-Type", "application/json"); // Đổi kiểu dữ liệu gửi đi là JSON
+
+    // Tạo JSON dữ liệu
+    String jsonData = "{";
+    jsonData += "\"device\": \"pump\", ";                               // Thiết bị là pump
+    jsonData += "\"state\": \"" + String(pumpOn ? "ON" : "OFF") + "\""; // Trạng thái ON hoặc OFF
+    jsonData += "}";
+
+    // Gửi yêu cầu POST với dữ liệu JSON
+    int responseCode = http.POST(jsonData);
+
+    // In ra phản hồi
+    Serial.printf("📤 Gửi trạng thái máy bơm (%s) đến server. Mã: %d\n", pumpOn ? "ON" : "OFF", responseCode);
+    String response = http.getString();               // Đọc phản hồi từ server
+    Serial.println("📥 JSON từ server: " + response); // In ra phản hồi để kiểm tra
+
+    http.end();
+  }
+  else
+  {
+    Serial.println("🚫 Không kết nối WiFi");
+  }
+}
+bool isFromSchedule = false; // ⬅️ Đặt ở đầu file hoặc gần biến global khác
 
 void checkPumpSchedule()
 {
@@ -512,8 +500,6 @@ void checkPumpSchedule()
   int weekday = timeinfo->tm_wday; // 0 = CN
   String today = (weekday == 0) ? "CN" : String(weekday);
 
-  Serial.printf("🕒 CheckSchedule: %02d:%02d | Today: %s\n", hour, minute, today.c_str());
-
   for (auto s : schedules)
   {
     int schedMinutes = s.hour * 60 + s.minute;
@@ -526,22 +512,25 @@ void checkPumpSchedule()
     // ✅ Chỉ chạy nếu:
     // - Khớp thời gian (±1 phút)
     // - Hôm nay nằm trong danh sách
-    // - Chưa từng chạy lịch này trong hôm nay
-    // Ngăn lịch chạy lại liên tục
+    // - Chưa từng tưới lịch này hôm nay
     if (abs(nowMinutes - schedMinutes) <= 1 &&
         isTodayScheduled(s.days, today) &&
         !(lastScheduleDay == weekday && lastScheduleHour == s.hour && lastScheduleMinute == s.minute))
     {
-      Serial.printf("✅ Khớp lịch, bắt đầu tưới theo lưu lượng! [%02d:%02d]\n", s.hour, s.minute);
+      Serial.printf("✅ Khớp lịch [%02d:%02d], bật bơm theo ngưỡng: %.0f mL\n", s.hour, s.minute, s.threshold);
 
       setPump(true);
+      sendPumpStatusToServer(true);
+
       pumpRunning = true;
       pumpStartTime = millis();
-      waterDeliveredML = 0;
+      waterDeliveredML = 0.0;
       waterTargetML = s.threshold;
       lastFlowCalc = millis();
 
-      // Ghi lại lịch này đã tưới
+      isFromSchedule = true; // ✅ Đánh dấu là bơm theo lịch
+
+      // Lưu lại thời điểm đã tưới để tránh lặp
       lastScheduleDay = weekday;
       lastScheduleHour = s.hour;
       lastScheduleMinute = s.minute;
@@ -550,12 +539,13 @@ void checkPumpSchedule()
     }
   }
 }
+
 void logPumpCompletion(float volume)
 {
   if (WiFi.status() == WL_CONNECTED)
   {
     HTTPClient http;
-    http.begin("http://192.168.137.74/api/pump_log.php"); // 🔁 Thay bằng đường dẫn PHP của bạn
+    http.begin("http://192.168.137.100/api/pump_log.php"); // 🔁 Thay bằng đường dẫn PHP của bạn
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
     // Lấy thời gian hiện tại
@@ -575,81 +565,81 @@ void logPumpCompletion(float volume)
     http.end();
   }
 }
-void getControlFromServer()
-{
-  if (WiFi.status() == WL_CONNECTED)
-  {
-    HTTPClient http;
-    String url = "http://192.168.137.74/api/pump-command.php?rand=" + String(random(1000, 9999));
-    http.begin(url); // Chống cache
-    int code = http.GET();
+// void getControlFromServer()
+// {
+//   if (WiFi.status() == WL_CONNECTED)
+//   {
+//     HTTPClient http;
+//     String url = "http://192.168.137.100/api/pump-command.php?rand=" + String(random(1000, 9999));
+//     http.begin(url); // Chống cache
+//     int code = http.GET();
 
-    if (code == 200)
-    {
-      String result = http.getString();
-      result.trim();
+//     if (code == 200)
+//     {
+//       String result = http.getString();
+//       result.trim();
 
-      Serial.println("📥 JSON từ server: " + result);
+//       Serial.println("📥 JSON từ server: " + result);
 
-      DynamicJsonDocument doc(512);
-      DeserializationError error = deserializeJson(doc, result);
+//       DynamicJsonDocument doc(512);
+//       DeserializationError error = deserializeJson(doc, result);
 
-      if (error)
-      {
-        Serial.print("❌ Lỗi JSON: ");
-        Serial.println(error.c_str());
-        return;
-      }
+//       if (error)
+//       {
+//         Serial.print("❌ Lỗi JSON: ");
+//         Serial.println(error.c_str());
+//         return;
+//       }
 
-      // ✅ Xử lý trạng thái máy bơm
-      String pumpState = doc["pump"] | "OFF"; // Trạng thái máy bơm
-      if (pumpState == "ON" && !pumpRunning)
-      {
-        setPump(true);
-        Serial.println("🚿 Bơm được bật từ server");
-      }
-      else if (pumpState == "OFF" && pumpRunning)
-      {
-        setPump(false);
-        Serial.println("🛑 Bơm được tắt từ server");
-      }
+//       // ✅ Xử lý trạng thái máy bơm
+//       String pumpState = doc["pump"] | "OFF"; // Trạng thái máy bơm
+//       if (pumpState == "ON" && !pumpRunning)
+//       {
+//         setPump(true);
+//         Serial.println("🚿 Bơm được bật từ server");
+//       }
+//       else if (pumpState == "OFF" && pumpRunning)
+//       {
+//         setPump(false);
+//         Serial.println("🛑 Bơm được tắt từ server");
+//       }
 
-      // ✅ Xử lý trạng thái rèm
-      String curtainState = doc["curtain"] | "OFF"; // Trạng thái rèm
-      if (curtainState == "ON" && !curtainRunning)
-      {
-        setCurtain(true);
-        Serial.println("🪟 Rèm được mở từ server");
-      }
-      else if (curtainState == "OFF" && curtainRunning)
-      {
-        setCurtain(false);
-        Serial.println("🪟 Rèm được đóng từ server");
-      }
+//       // ✅ Xử lý trạng thái rèm
+//       String curtainState = doc["curtain"] | "OFF"; // Trạng thái rèm
+//       if (curtainState == "ON" && !curtainRunning)
+//       {
+//         setCurtain(true);
+//         Serial.println("🪟 Rèm được mở từ server");
+//       }
+//       else if (curtainState == "OFF" && curtainRunning)
+//       {
+//         setCurtain(false);
+//         Serial.println("🪟 Rèm được đóng từ server");
+//       }
 
-      // ✅ Xử lý đèn LED từ server
-      String ledServerState = doc["led"] | "OFF"; // Trạng thái đèn LED
-      bool shouldLedBeOn = (ledServerState == "ON");
+//       // ✅ Xử lý đèn LED từ server
+//       String ledServerState = doc["led"] | "OFF"; // Trạng thái đèn LED
+//       bool shouldLedBeOn = (ledServerState == "ON");
 
-      if (shouldLedBeOn != ledState)
-      {
-        ledState = shouldLedBeOn;
-        digitalWrite(LED_PIN, ledState);
-        Serial.printf("💡 Đèn được %s từ server\n", ledState ? "BẬT" : "TẮT");
-      }
-    }
-    else
-    {
-      Serial.printf("❌ Lỗi HTTP (%d) khi GET\n", code);
-    }
+//       if (shouldLedBeOn != ledState) // Chỉ thay đổi khi trạng thái khác
+//       {
+//         ledState = shouldLedBeOn;
+//         digitalWrite(LED_PIN, ledState);
+//         Serial.printf("💡 Đèn được %s từ server\n", ledState ? "BẬT" : "TẮT");
+//       }
+//     }
+//     else
+//     {
+//       Serial.printf("❌ Lỗi HTTP (%d) khi GET\n", code);
+//     }
 
-    http.end();
-  }
-  else
-  {
-    Serial.println("🚫 ESP32 chưa kết nối WiFi");
-  }
-}
+//     http.end();
+//   }
+//   else
+//   {
+//     Serial.println("🚫 ESP32 chưa kết nối WiFi");
+//   }
+// }
 
 // ✅ Gửi dữ liệu lên server
 void sendSensorData()
@@ -693,7 +683,7 @@ void downloadScheduleFromServer()
   if (WiFi.status() == WL_CONNECTED)
   {
     HTTPClient http;
-    http.begin("http://192.168.137.74/api/control.php?esp=1");
+    http.begin("http://192.168.137.100/api/control.php?esp=1");
 
     int code = http.GET();
     if (code == 200)
@@ -781,6 +771,48 @@ void updateFlowRate()
     Serial.printf("💦 Lưu lượng hiện tại: %.2f L/min\n", flowRate_Lmin);
   }
 }
+// Khai báo WebSocket server
+AsyncWebSocket ws("/ws");
+
+// Hàm gửi thông báo trạng thái cho tất cả các client qua WebSocket
+void notifyClients(String json)
+{
+  ws.textAll(json); // Gửi JSON đến tất cả các client kết nối qua WebSocket
+}
+
+// Thêm biến trạng thái mới để quyết định có sử dụng ngưỡng hay không
+bool useThreshold = true; // Nếu true, sử dụng ngưỡng để kiểm tra độ ẩm
+
+// Biến tính tổng lượng nước đã bơm
+float totalWaterDeliveredML = 0.0; // Tổng lượng nước đã bơm
+String getToday()
+{
+  time_t now = time(nullptr);
+  struct tm *timeinfo = localtime(&now);
+  int weekday = timeinfo->tm_wday; // 0 = CN
+  switch (weekday)
+  {
+  case 0:
+    return "CN"; // Chủ nhật
+  case 1:
+    return "T2"; // Thứ 2
+  case 2:
+    return "T3"; // Thứ 3
+  case 3:
+    return "T4"; // Thứ 4
+  case 4:
+    return "T5"; // Thứ 5
+  case 5:
+    return "T6"; // Thứ 6
+  case 6:
+    return "T7"; // Thứ 7
+  }
+  return "";
+}
+bool isFromApp = false;      // Biến xác định lệnh đến từ app
+                             // Đánh dấu lệnh từ app (tắt/bật bơm)
+bool isScheduleTime = false; // Kiểm tra xem có trùng lịch tưới không
+
 void controlPumpLogic()
 {
   time_t now = time(nullptr);
@@ -789,38 +821,64 @@ void controlPumpLogic()
   int hour = timeinfo->tm_hour;
   int minute = timeinfo->tm_min;
 
-  // Nếu đang ở chế độ manual -> làm theo app
+  // ⛔ KHÔNG kiểm tra lại isScheduleTime nữa vì đã xử lý ở checkPumpSchedule()
+  // ✅ Chúng ta sẽ dựa vào biến isFromSchedule hoặc isFromApp
+
+  // ⛔ Nếu không phải bơm từ lịch hoặc từ app, thì không tiếp tục bơm
+  if (!isFromSchedule && !isFromApp)
+  {
+    // Nếu bơm đang chạy → kiểm tra để tắt nếu đã đủ điều kiện dừng
+    if (pumpRunning && (soilMoisture > soilThreshold || millis() - pumpStartTime > pumpDuration * 1000))
+    {
+      setPump(false);
+      sendPumpStatusToServer(false);
+      pumpRunning = false;
+      Serial.println("🛑 Tắt bơm vì không phải thời gian lịch tưới hoặc hết thời gian bơm");
+    }
+    return; // ⛔ Thoát không xử lý gì thêm
+  }
+
+  // ✅ Nếu đang ở chế độ manual → làm theo lệnh từ app
   if (manualOverride)
   {
     setPump(pumpCommand);
     return;
   }
 
-  // Nếu auto mode -> tưới theo giờ và ngưỡng
+  // ✅ Nếu ở chế độ tự động (autoMode)
   if (autoMode)
   {
-    if (!pumpRunning && hour == pumpStartHour && minute == pumpStartMinute && soilMoisture < soilThreshold)
+    // Nếu đúng thời gian tưới và bơm chưa chạy
+    if (!pumpRunning &&
+        hour == pumpStartHour &&
+        minute == pumpStartMinute &&
+        (soilMoisture < soilThreshold || !useThreshold))
     {
       setPump(true);
+      sendPumpStatusToServer(true);
       pumpRunning = true;
       pumpStartTime = millis();
-      waterDeliveredML = 0; // reset lượng nước
+      waterDeliveredML = 0;
       lastFlowCalc = millis();
+      isFromSchedule = true; // ✅ Đánh dấu là bơm theo lịch
       Serial.println("🚿 Bắt đầu tưới tự động");
     }
 
+    // Nếu bơm đang chạy → kiểm tra điều kiện dừng
     if (pumpRunning)
     {
-      if (soilMoisture > soilThreshold || (millis() - pumpStartTime > pumpDuration * 1000))
+      if ((useThreshold && soilMoisture > soilThreshold) || (millis() - pumpStartTime > pumpDuration * 1000))
       {
         setPump(false);
+        sendPumpStatusToServer(false);
         pumpRunning = false;
+        isFromSchedule = false; // ✅ Reset để chuẩn bị cho lần kế tiếp
         Serial.println("🛑 Tắt bơm vì đạt điều kiện ngưỡng hoặc hết thời gian");
       }
     }
   }
 
-  // Log trạng thái định kỳ
+  // ✅ Log trạng thái mỗi 5 giây
   if (millis() - lastPumpLog > 5000)
   {
     Serial.printf("🧠 AutoMode: %d | Manual: %d | Soil: %d | Threshold: %d | Pump: %d\n",
@@ -828,69 +886,248 @@ void controlPumpLogic()
     lastPumpLog = millis();
   }
 
-  // Nếu đang bơm → tính lượng nước đã bơm
-  if (pumpRunning)
+  // ✅ Nếu đang bơm theo lịch → theo dõi lượng nước đã bơm
+  if (pumpRunning && isFromSchedule)
   {
     unsigned long nowMs = millis();
 
-    // ✅ Chờ ít nhất 3 giây để tránh lưu lượng sai lệch ban đầu
+    // ✅ Chờ ít nhất 3 giây và tính lưu lượng mỗi giây
     if (nowMs - pumpStartTime >= 3000 && nowMs - lastFlowCalc >= 1000)
     {
       float safeFlowRate = flowRate;
 
-      // ✅ Chặn lưu lượng bất thường
+      // ⚠️ Lọc bỏ giá trị lưu lượng bất thường
       if (safeFlowRate < 0.1 || safeFlowRate > 200.0)
       {
         Serial.printf("⚠️ Lưu lượng bất thường (%.2f L/min) → bỏ qua\n", safeFlowRate);
         safeFlowRate = 0;
       }
 
+      // ✅ Tính lượng nước theo lưu lượng
       float flowMLperSec = (safeFlowRate / 60.0) * 1000.0;
+
+      // ✅ Cộng dồn lượng nước
       waterDeliveredML += flowMLperSec;
+      totalWaterDeliveredML += flowMLperSec;
       lastFlowCalc = nowMs;
 
       Serial.printf("💧 Đã bơm: %.2f mL / %.0f mL\n", waterDeliveredML, waterTargetML);
+      Serial.printf("🔢 Tổng lượng nước đã bơm: %.2f mL\n", totalWaterDeliveredML);
 
-      // ✅ Dừng nếu đủ lượng nước
+      // ✅ Dừng nếu đủ lượng nước theo lịch
       if (waterDeliveredML >= waterTargetML)
       {
         setPump(false);
         pumpRunning = false;
+        isFromSchedule = false; // ✅ Reset sau khi hoàn tất
+        sendPumpStatusToServer(false);
         Serial.println("✅ Đủ lượng nước, dừng bơm");
 
-        // 👉 Gửi log nếu có hàm logPumpCompletion
+        // Gửi log bơm
         logPumpCompletion(waterDeliveredML);
       }
     }
   }
 }
+
+// Hàm nhận lệnh từ server (app)
+void getControlFromServer()
+{
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    HTTPClient http;
+    String url = "http://192.168.137.100/api/pump-command.php?rand=" + String(random(1000, 9999));
+    http.begin(url); // Chống cache
+    int code = http.GET();
+
+    if (code == 200)
+    {
+      String result = http.getString();
+      result.trim();
+
+      Serial.println("📥 JSON từ server: " + result);
+
+      DynamicJsonDocument doc(512);
+      DeserializationError error = deserializeJson(doc, result);
+
+      if (error)
+      {
+        Serial.print("❌ Lỗi JSON: ");
+        Serial.println(error.c_str());
+        return;
+      }
+
+      // ✅ Xử lý trạng thái máy bơm
+      String pumpState = doc["pump"] | "OFF"; // Trạng thái máy bơm
+      if (pumpState == "ON" && !pumpRunning)
+      {
+        setPump(true);
+        isFromApp = true; // Đánh dấu lệnh đến từ app
+        Serial.println("🚿 Bơm được bật từ server");
+      }
+      else if (pumpState == "OFF" && pumpRunning)
+      {
+        setPump(false);
+        isFromApp = true; // Đánh dấu lệnh đến từ app
+        Serial.println("🛑 Bơm được tắt từ server");
+      }
+
+      // ✅ Xử lý trạng thái rèm
+      String curtainState = doc["curtain"] | "OFF"; // Trạng thái rèm
+      if (curtainState == "ON" && !curtainRunning)
+      {
+        setCurtain(true);
+        Serial.println("🪟 Rèm được mở từ server");
+      }
+      else if (curtainState == "OFF" && curtainRunning)
+      {
+        setCurtain(false);
+        Serial.println("🪟 Rèm được đóng từ server");
+      }
+
+      // ✅ Xử lý đèn LED từ server
+      String ledServerState = doc["led"] | "OFF"; // Trạng thái đèn LED
+      bool shouldLedBeOn = (ledServerState == "ON");
+
+      if (shouldLedBeOn != ledState) // Chỉ thay đổi khi trạng thái khác
+      {
+        ledState = shouldLedBeOn;
+        digitalWrite(LED_PIN, ledState);
+        Serial.printf("💡 Đèn được %s từ server\n", ledState ? "BẬT" : "TẮT");
+      }
+    }
+    else
+    {
+      Serial.printf("❌ Lỗi HTTP (%d) khi GET\n", code);
+    }
+
+    http.end();
+  }
+  else
+  {
+    Serial.println("🚫 ESP32 chưa kết nối WiFi");
+  }
+}
+
+// Hàm lấy ngày hiện tại
+
 void handlePumpTouchSensor()
 {
-  bool currentState = digitalRead(TOUCH_PUMP_PIN);
+  bool currentState = digitalRead(TOUCH_PUMP_PIN); // Đọc trạng thái cảm biến chạm
 
+  // Nếu vừa có sự kiện chạm (từ LOW → HIGH)
   if (currentState == HIGH && lastTouchState == LOW)
   {
-    // Phát hiện 1 lần chạm (rising edge)
-    setPump(!pumpRunning); // Đảo trạng thái bơm
+    // Đảo trạng thái bơm
+    bool newPumpState = !pumpRunning;
+    setPump(newPumpState);
+    pumpRunning = newPumpState;
+
+    if (newPumpState)
+    {
+      pumpStartTime = millis(); // Lưu thời gian bắt đầu bơm
+      waterDeliveredML = 0.0;   // Reset lượng nước bơm
+      lastFlowCalc = millis();  // Cập nhật mốc thời gian đo lưu lượng
+    }
+
+    isFromApp = true; // ✅ Đánh dấu là người dùng bật bằng tay
+
     Serial.println("👆 Cảm biến chạm: Đổi trạng thái máy bơm");
+
+    // Gửi trạng thái hiện tại dưới dạng JSON cho WebSocket và server
+    String json = "{\"pump\":\"" + String(pumpRunning ? "ON" : "OFF") +
+                  "\", \"led\":\"" + String(ledState ? "ON" : "OFF") +
+                  "\", \"curtain\":\"" + String(curtainRunning ? "ON" : "OFF") + "\"}";
+
+    notifyClients(json);                 // Gửi qua WebSocket
+    sendPumpStatusToServer(pumpRunning); // Gửi lên server HTTP
+
+    delay(300); // ⏱️ chống rung chạm
+  }
+
+  // Cập nhật trạng thái cuối để phát hiện lần chạm tiếp theo
+  lastTouchState = currentState;
+}
+
+void sendLedStatusToServer(bool ledOn)
+{
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    HTTPClient http;
+    String url = "http://192.168.137.100/api/pump-command.php"; // Đảm bảo URL này đúng
+    http.begin(url);
+    http.addHeader("Content-Type", "application/json");
+
+    // Tạo JSON dữ liệu
+    String jsonData = "{";
+    jsonData += "\"device\": \"led\", ";
+    jsonData += "\"state\": \"" + String(ledOn ? "ON" : "OFF") + "\"";
+    jsonData += "}";
+
+    // Gửi yêu cầu POST
+    int responseCode = http.POST(jsonData);
+
+    // In ra phản hồi
+    Serial.printf("📤 Gửi trạng thái đèn (%s) đến server. Mã: %d\n", ledOn ? "ON" : "OFF", responseCode);
+    String response = http.getString();
+    Serial.println("📥 JSON từ server: " + response); // In ra phản hồi để kiểm tra
+
+    http.end();
+  }
+  else
+  {
+    Serial.println("🚫 Không kết nối WiFi");
+  }
+}
+
+void handleLedTouchSensor()
+{
+  bool current = digitalRead(TOUCH_LED_PIN);
+
+  if (current == HIGH && lastTouchLedState == LOW)
+  {
+    ledState = !ledState;            // Đảo trạng thái đèn
+    digitalWrite(LED_PIN, ledState); // Cập nhật trạng thái đèn trên phần cứng
+    Serial.printf("💡 Đèn %s\n", ledState ? "BẬT" : "TẮT");
+
+    // Cập nhật JSON trạng thái
+    String json = "{\"pump\":\"" + String(pumpRunning ? "ON" : "OFF") +
+                  "\", \"led\":\"" + String(ledState ? "ON" : "OFF") +
+                  "\", \"curtain\":\"" + String(curtainRunning ? "ON" : "OFF") + "\"}";
+
+    // Gửi JSON qua WebSocket
+    notifyClients(json);
+
+    // ✅ Gửi trạng thái LED lên server
+    sendLedStatusToServer(ledState);
 
     delay(300); // Chống rung nhẹ
   }
 
-  lastTouchState = currentState;
-}
-void handleLedTouchSensor()
-{
-  bool current = digitalRead(TOUCH_LED_PIN);
-  if (current == HIGH && lastTouchLedState == LOW)
-  {
-    ledState = !ledState;
-    digitalWrite(LED_PIN, ledState);
-    Serial.printf("💡 Đèn %s\n", ledState ? "BẬT" : "TẮT");
-    delay(300);
-  }
   lastTouchLedState = current;
 }
+void handleFlameDetection()
+{
+  // Kiểm tra trạng thái cảm biến lửa
+  bool fireDetected = digitalRead(FLAME_SENSOR_D0) == LOW; // LOW = có lửa
+
+  if (fireDetected)
+  {
+    Serial.println("🔥 Lửa phát hiện! Bật relay!");
+
+    // Bật relay (bơm) khi có lửa
+
+    // Có thể thêm mã để báo động (buzz) hoặc cảnh báo khác nếu cần
+    digitalWrite(BUZZER_PIN, HIGH); // Bật còi báo động khi có lửa
+  }
+  else
+  {
+    // Tắt relay (bơm) khi không có lửa
+    digitalWrite(BUZZER_PIN, LOW); // Tắt còi báo động khi không có lửa
+  }
+}
+
+// Hàm gửi thông báo trạng thái cho tất cả các client qua WebSocket hoặc HTTP
 
 void setup()
 {
@@ -957,24 +1194,17 @@ void setup()
   pinMode(SOIL_PIN, INPUT);
   pinMode(FLOW_SENSOR_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(FLOW_SENSOR_PIN), flowISR, RISING);
-
+  pinMode(BUZZER_PIN, OUTPUT);
   // 🧠 LVGL giao diện
   lv_init();
   lv_log_register_print_cb(log_print);
-
-  // 🖲️ Touchscreen
-  touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
-  touchscreen.begin();
-  touchscreen.setRotation(2);
+  ;
 
   // 📺 Màn hình
   lv_display_t *disp = lv_tft_espi_create(SCREEN_WIDTH, SCREEN_HEIGHT, draw_buf, sizeof(draw_buf));
   lv_display_set_rotation(disp, LV_DISPLAY_ROTATION_0);
 
   // ⬆️ Đọc cảm ứng
-  lv_indev_t *indev = lv_indev_create();
-  lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
-  lv_indev_set_read_cb(indev, touchscreen_read);
 
   // 🖼️ GUI
   lv_create_main_gui();
@@ -1021,6 +1251,9 @@ void loop()
   updateFlowRate();        // Lưu lượng nước
   handlePumpTouchSensor(); // Cảm biến chạm bơm
   handleLedTouchSensor();  // Cảm biến chạm đèn
+
+  // Kiểm tra cảm biến lửa và bật/tắt relay
+  handleFlameDetection();
 
   delay(5); // Mượt cho LVGL
 }

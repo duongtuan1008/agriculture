@@ -21,7 +21,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.appbar.MaterialToolbar;
 import androidx.core.view.GravityCompat;
-
+import com.example.myapplication.RetrofitClientRaspi;
 
 public class DoorActivity extends AppCompatActivity {
 
@@ -31,7 +31,7 @@ public class DoorActivity extends AppCompatActivity {
     ArrayAdapter<String> adapter;
     ArrayList<String> rfidItems = new ArrayList<>();
 
-    String baseURL = "http://192.168.137.74/api/";
+    APIService api = RetrofitClientRaspi.getClient().create(APIService.class);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,7 +110,8 @@ public class DoorActivity extends AppCompatActivity {
             return;
         }
 
-        String url = baseURL + "password.php";
+        String url = RetrofitClientRaspi.getBaseUrl() + "password.php";
+
 
         StringRequest request = new StringRequest(Request.Method.POST, url,
                 response -> Toast.makeText(this, "✅ " + response, Toast.LENGTH_LONG).show(),
@@ -143,7 +144,7 @@ public class DoorActivity extends AppCompatActivity {
             return;
         }
 
-        String url = baseURL + "rfid.php?action=add&id=" + id
+        String url = RetrofitClientRaspi.getBaseUrl() + "rfid.php?action=add&id=" + id
                 + "&uid1=" + parts[0] + "&uid2=" + parts[1]
                 + "&uid3=" + parts[2] + "&uid4=" + parts[3];
 
@@ -178,7 +179,7 @@ public class DoorActivity extends AppCompatActivity {
             return;
         }
 
-        String url = baseURL + "rfid.php";
+        String url = RetrofitClientRaspi.getBaseUrl()  + "rfid.php";
 
         StringRequest request = new StringRequest(Request.Method.POST, url,
                 response -> {
@@ -200,7 +201,7 @@ public class DoorActivity extends AppCompatActivity {
     }
 
     private void fetchRFIDList() {
-        String url = baseURL + "rfid.php?action=sync";
+        String url = RetrofitClientRaspi.getBaseUrl()  + "rfid.php?action=sync";
 
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
                 response -> {
@@ -232,7 +233,7 @@ public class DoorActivity extends AppCompatActivity {
     }
 
     private void getCurrentPassword() {
-        String url = baseURL + "password.php?action=get_password";
+        String url = RetrofitClientRaspi.getBaseUrl() + "password.php?action=get_password";
 
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
                 response -> {

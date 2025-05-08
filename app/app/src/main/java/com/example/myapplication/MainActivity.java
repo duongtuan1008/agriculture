@@ -47,6 +47,7 @@ import java.io.IOException;
 import com.google.gson.Gson;
 
 
+
 public class MainActivity extends AppCompatActivity {
 
     TextView txtTemp, txtHumidity, txtLight, txtSoil,txtFlame ;
@@ -62,6 +63,8 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
         NavigationView navigationView = findViewById(R.id.navigation_view);
+
+        APIService api = RetrofitClientRaspi.getClient().create(APIService.class);
         // Ánh xạ View
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         drawerLayout = findViewById(R.id.drawer_layout);
@@ -197,8 +200,9 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void sendControlCommand(String device, String command) {
+        ControlCommand controlCommand = new ControlCommand(device, command);
         APIService api = RetrofitClientRaspi.getClient().create(APIService.class);
-        Call<ResponseBody> call = api.sendControl(device, command);
+        Call<ResponseBody> call = api.sendControl(controlCommand);
 
         call.enqueue(new Callback<ResponseBody>() {
             @Override
@@ -229,9 +233,9 @@ public class MainActivity extends AppCompatActivity {
                 Log.e("API_ERROR", "❌ Lỗi kết nối: " + t.getMessage(), t);
                 Log.e("API_ERROR", "❌ URL: " + call.request().url());
             }
-
         });
     }
+
 
     private void fetchDeviceStates() {
         APIService api = RetrofitClientRaspi.getClient().create(APIService.class);

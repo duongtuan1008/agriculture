@@ -45,7 +45,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.appbar.MaterialToolbar;
-
+import com.example.myapplication.RetrofitClientRaspi;
 
 public class PumpActivity extends AppCompatActivity {
     Switch switchAuto;
@@ -61,6 +61,7 @@ public class PumpActivity extends AppCompatActivity {
     int threshold = 3000;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        APIService api = RetrofitClientRaspi.getClient().create(APIService.class);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pump);
         editThreshold = findViewById(R.id.editThreshold);
@@ -215,13 +216,16 @@ public class PumpActivity extends AppCompatActivity {
     private void sendToServer(boolean auto, int threshold, int hour, int minute, int duration, String repeatDays) {
         new Thread(() -> {
             try {
-                URL url = new URL("http://192.168.137.74/api/control.php"); // ← Đảm bảo IP đúng
+                // Tạo đối tượng URL từ baseUrl và đường dẫn
+                URL url = new URL(RetrofitClientRaspi.getBaseUrl() + "control.php");  // ← Đảm bảo IP đúng
+
+                // Mở kết nối HTTP
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);
                 conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
-                // ✅ Thêm repeat_days vào postData
+                // Thêm repeat_days vào postData
                 String postData =
                         "auto_mode=" + (auto ? "1" : "0") +
                                 "&manual_override=0" +
@@ -229,15 +233,31 @@ public class PumpActivity extends AppCompatActivity {
                                 "&soil_threshold=" + threshold +
                                 "&pump_start_hour=" + hour +
                                 "&pump_start_minute=" + minute +
-                                "&repeat_days=" + URLEncoder.encode(repeatDays, "UTF-8");;
+                                "&repeat_days=" + URLEncoder.encode(repeatDays, "UTF-8");
 
-                OutputStream os = conn.getOutputStream();
-                os.write(postData.getBytes());
-                os.flush();
-                os.close();
+                // Gửi dữ liệu tới server
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(postData.getBytes());
+                    os.flush();
+                }
 
+                // Kiểm tra phản hồi từ server
                 int responseCode = conn.getResponseCode();
                 Log.d("HTTP", "Server response: " + responseCode);
+
+                // Đọc phản hồi (nếu cần thiết)
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    String inputLine;
+                    StringBuilder response = new StringBuilder();
+                    while ((inputLine = in.readLine()) != null) {
+                        response.append(inputLine);
+                    }
+                    in.close();
+                    Log.d("HTTP", "Server Response: " + response.toString());
+                } else {
+                    Log.e("HTTP", "Server returned non-OK response: " + responseCode);
+                }
 
                 conn.disconnect();
             } catch (Exception e) {
@@ -245,10 +265,11 @@ public class PumpActivity extends AppCompatActivity {
             }
         }).start();
     }
+
     private void sendToServerWithId(int id, boolean auto, int threshold, int hour, int minute, String repeatDays) {
         new Thread(() -> {
             try {
-                URL url = new URL("http://192.168.137.74/api/control.php");
+                URL url = new URL(RetrofitClientRaspi.getBaseUrl() + "control.php");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);
@@ -343,7 +364,7 @@ public class PumpActivity extends AppCompatActivity {
     private void loadConfigFromServer() {
         new Thread(() -> {
             try {
-                URL url = new URL("http://192.168.137.74/api/control.php?esp=1");
+                URL url = new URL(RetrofitClientRaspi.getBaseUrl() + "control.php?esp=1");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
 

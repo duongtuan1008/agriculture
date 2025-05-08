@@ -44,12 +44,9 @@ public interface APIService {
     Call<DeviceState> getDeviceStates();
 
     // Gửi điều khiển: {"status":"ok", "message":"..."}
-    @FormUrlEncoded
     @POST("pump-command.php")
-    Call<ResponseBody> sendControl(
-            @Field("device") String device,
-            @Field("state") String state
-    );
+    Call<ResponseBody> sendControl(@Body ControlCommand controlCommand);
+
     @POST("user.php") // nếu API bạn đặt là http://192.168.x.x/api/user.php
     Call<UserResponse> processUser(@Body UserRequest request);
 

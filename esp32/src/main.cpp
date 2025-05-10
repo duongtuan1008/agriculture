@@ -17,11 +17,13 @@
 #include <WiFiUdp.h>
 #include <vector>
 #include <ESPAsyncWebServer.h>
+#include <Servo.h>
 
+Servo curtainServo;
 // Replace with your network credentials
-const char *ssid = "mypc";
-const char *password = "11111111";
-const char *serverName = "http://192.168.137.100/api/get-data.php";
+const char *ssid = "VUDANGKHIEM 6218";
+const char *password = "23456789";
+const char *serverName = "http://192.168.137.73/api/get-data.php";
 String apiKeyValue = "tPmAT5Ab3j7F9";
 WebServer server(80);
 WiFiUDP ntpUDP;
@@ -335,15 +337,17 @@ void setCurtain(bool on)
   if (on == lastState)
     return; // ⛔ Không làm gì nếu trạng thái không thay đổi
 
-  // Điều khiển GPIO 19
-  digitalWrite(CURTAIN_PIN, on ? HIGH : LOW); // Kiểm tra lại HIGH/LOW
-  curtainRunning = on;
-
-  // Kiểm tra và in ra thông báo để xác nhận trạng thái của rèm
-  Serial.printf("%s | GPIO %d trạng thái: %d\n",
-                on ? "🪟 Curtain OPEN" : "🛑 Curtain CLOSE",
-                CURTAIN_PIN,
-                digitalRead(CURTAIN_PIN)); // In trạng thái GPIO 19
+  // Điều khiển servo
+  if (on)
+  {
+    curtainServo.write(180); // Đặt góc servo ở 90 độ để "mở" màn che (tùy chỉnh góc theo nhu cầu)
+    Serial.printf("🪟 Curtain OPEN | Servo angle: 90\n");
+  }
+  else
+  {
+    curtainServo.write(0); // Đặt góc servo ở 0 độ để "đóng" màn che
+    Serial.printf("🛑 Curtain CLOSE | Servo angle: 0\n");
+  }
 
   lastState = on;
 }
@@ -460,7 +464,7 @@ void sendPumpStatusToServer(bool pumpOn)
   if (WiFi.status() == WL_CONNECTED)
   {
     HTTPClient http;
-    String url = "http://192.168.137.100/api/pump-command.php"; // Đảm bảo URL này đúng
+    String url = "http://192.168.137.73/api/pump-command.php"; // Đảm bảo URL này đúng
     http.begin(url);
     http.addHeader("Content-Type", "application/json"); // Đổi kiểu dữ liệu gửi đi là JSON
 
@@ -545,7 +549,7 @@ void logPumpCompletion(float volume)
   if (WiFi.status() == WL_CONNECTED)
   {
     HTTPClient http;
-    http.begin("http://192.168.137.100/api/pump_log.php"); // 🔁 Thay bằng đường dẫn PHP của bạn
+    http.begin("http://192.168.137.73/api/pump_log.php"); // 🔁 Thay bằng đường dẫn PHP của bạn
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
     // Lấy thời gian hiện tại
@@ -683,7 +687,7 @@ void downloadScheduleFromServer()
   if (WiFi.status() == WL_CONNECTED)
   {
     HTTPClient http;
-    http.begin("http://192.168.137.100/api/control.php?esp=1");
+    http.begin("http://192.168.137.73/api/control.php?esp=1");
 
     int code = http.GET();
     if (code == 200)
@@ -936,7 +940,7 @@ void getControlFromServer()
   if (WiFi.status() == WL_CONNECTED)
   {
     HTTPClient http;
-    String url = "http://192.168.137.100/api/pump-command.php?rand=" + String(random(1000, 9999));
+    String url = "http://192.168.137.73/api/pump-command.php?rand=" + String(random(1000, 9999));
     http.begin(url); // Chống cache
     int code = http.GET();
 
@@ -1054,7 +1058,7 @@ void sendLedStatusToServer(bool ledOn)
   if (WiFi.status() == WL_CONNECTED)
   {
     HTTPClient http;
-    String url = "http://192.168.137.100/api/pump-command.php"; // Đảm bảo URL này đúng
+    String url = "http://192.168.137.73/api/pump-command.php"; // Đảm bảo URL này đúng
     http.begin(url);
     http.addHeader("Content-Type", "application/json");
 

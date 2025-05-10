@@ -177,10 +177,11 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 fetchSensorData(); // Gọi lại API lấy dữ liệu mới
                 new android.os.Handler().postDelayed(this, 5000); // Lặp lại sau 5s
+                fetchDeviceStates();
             }
         }, 5000); // Đợi 5s trước lần đầu
 
-        fetchDeviceStates(); // sau khi POST xong
+        // sau khi POST xong
 
     }
     @Override
@@ -236,6 +237,20 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void updateDeviceStatus(String deviceId, String status) {
+        // Cập nhật trạng thái của các switch theo từng thiết bị
+        switch (deviceId) {
+            case "pump":
+                switchPump.setChecked("ON".equals(status));
+                break;
+            case "led":
+                switchLed.setChecked("ON".equals(status));
+                break;
+            case "curtain":
+                switchCover.setChecked("ON".equals(status));
+                break;
+        }
+    }
 
     private void fetchDeviceStates() {
         APIService api = RetrofitClientRaspi.getClient().create(APIService.class);
@@ -249,8 +264,24 @@ public class MainActivity extends AppCompatActivity {
                     DeviceState state = response.body();
                     if (state != null) {
                         Log.d("API", "✅ Server: " + new Gson().toJson(state));
-                        switchPump.setChecked("ON".equals(state.getPump()));
-                        switchLed.setChecked("ON".equals(state.getLed()));
+
+                        // Cập nhật trạng thái của các switch dựa trên dữ liệu nhận được
+                        // Đồng bộ trạng thái máy bơm
+                        if ("ON".equals(state.getPump())) {
+                            switchPump.setChecked(true);  // Nếu trạng thái là "ON", set switch bật
+                        } else {
+                            switchPump.setChecked(false);  // Nếu trạng thái là "OFF", set switch tắt
+                        }
+
+                        // Đồng bộ trạng thái đèn LED
+                        if ("ON".equals(state.getLed())) {
+                            switchLed.setChecked(true);  // Nếu trạng thái là "ON", set switch bật
+                        } else {
+                            switchLed.setChecked(false);  // Nếu trạng thái là "OFF", set switch tắt
+                        }
+
+                        // Đồng bộ trạng thái màn che (nếu có)
+
                     } else {
                         Log.e("API_ERROR", "❌ JSON body rỗng (null). Có thể server trả về chuỗi trống.");
                     }
@@ -269,6 +300,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
 
 
 

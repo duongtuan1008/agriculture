@@ -327,7 +327,7 @@ public class MainActivity extends AppCompatActivity {
 
                     } else {
                         txtFlame.setText("✅ An toàn");
-                        txtFlame.setTextColor(Color.WHITE);
+                        txtFlame.setTextColor(Color.BLACK);
                     }
 
                     ;

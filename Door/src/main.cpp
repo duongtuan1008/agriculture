@@ -146,6 +146,8 @@ void getData()
   char key = keypad.getKey();
   if (key)
   {
+    Serial.print("Phím bấm: ");
+    Serial.println(key);
     if (in_num < 5)
     {
       data_input[in_num] = key;
@@ -576,7 +578,7 @@ void addRFID()
   case MODE_ID_RFID_ADD:
   {
     Serial.println("📌 Nhập ID thẻ...");
-
+    lcd.clear();
     lcd.setCursor(0, 1);
     lcd.print("Input ID:");
 
@@ -594,6 +596,7 @@ void addRFID()
     {
       MODE_RFID = MODE_ID_RFID_FIRST;
     }
+    delay(2000);
   }
   break;
 
@@ -602,6 +605,7 @@ void addRFID()
     Serial.println("🔄 Chờ quét thẻ lần 1...");
     lcd.clear();
     lcd.setCursor(0, 1);
+    lcd.clear();
     lcd.print("Put RFID");
 
     unsigned long timeout = millis() + 10000;
@@ -1119,52 +1123,42 @@ void loop()
   // ✅ Gọi check password & rfid
   checkPass();
   rfidCheck();
-
+  fetchSchedule();
   // ✅ Cập nhật lịch mỗi 30 giây nếu đang ở trạng thái chờ
-  if (index_t == 0 && millis() - lastScheduleFetch > 1000)
+  while (index_t == 1)
   {
-    fetchSchedule();
-    lastScheduleFetch = millis();
+    changePass();
   }
 
-  // ✅ Xử lý các trạng thái hệ thống
-  switch (index_t)
+  while (index_t == 2)
   {
-  case 1:
-    changePass();
-    index_t = 0;
-    break;
-
-  case 2:
     resetPass();
-    index_t = 0;
-    break;
+  }
 
-  case 3:
+  while (index_t == 3)
+  {
     openDoor();
     error_pass = 0;
-    index_t = 0;
-    break;
+  }
 
-  case 4:
+  while (index_t == 4)
+  {
     error();
     error_pass = 0;
-    index_t = 0;
-    break;
+  }
 
-  case 8:
+  while (index_t == 8)
+  {
     addRFID();
-    index_t = 0;
-    break;
+  }
 
-  case 9:
+  while (index_t == 9)
+  {
     delRFID();
-    index_t = 0;
-    break;
+  }
 
-  case 10:
+  while (index_t == 10)
+  {
     delAllRFID();
-    index_t = 0;
-    break;
   }
 }

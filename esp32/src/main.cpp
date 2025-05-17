@@ -17,18 +17,19 @@
 #include <WiFiUdp.h>
 #include <vector>
 #include <ESPAsyncWebServer.h>
-#include <Servo.h>
+#include <ESP32Servo.h>
 
 Servo curtainServo;
 // Replace with your network credentials
 const char *ssid = "VUDANGKHIEM 6218";
 const char *password = "23456789";
+
 const char *serverName = "http://192.168.137.73/api/get-data.php";
 String apiKeyValue = "tPmAT5Ab3j7F9";
 WebServer server(80);
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", 7 * 3600, 60000); // GMT+7
-
+Servo sg90;
 // Install Adafruit Unified Sensor and Adafruit BME280 Library
 
 Adafruit_AHTX0 aht10;
@@ -331,25 +332,28 @@ void setPump(bool on)
                 on ? "🚿 Pump ON" : "🛑 Pump OFF", PUMP_RELAY, digitalRead(PUMP_RELAY));
   lastState = on;
 }
+
 void setCurtain(bool on)
 {
   static bool lastState = false;
   if (on == lastState)
-    return; // ⛔ Không làm gì nếu trạng thái không thay đổi
+    return;
 
-  // Điều khiển servo
   if (on)
   {
-    curtainServo.write(180); // Đặt góc servo ở 90 độ để "mở" màn che (tùy chỉnh góc theo nhu cầu)
-    Serial.printf("🪟 Curtain OPEN | Servo angle: 90\n");
+    sg90.attach(CURTAIN_PIN);
+    sg90.write(90); // Góc mở rèm, chỉnh theo thực tế
+    Serial.println("🪟 Curtain OPEN | Servo angle: 90");
   }
   else
   {
-    curtainServo.write(0); // Đặt góc servo ở 0 độ để "đóng" màn che
-    Serial.printf("🛑 Curtain CLOSE | Servo angle: 0\n");
+    sg90.attach(CURTAIN_PIN);
+    sg90.write(0); // Góc đóng rèm
+    Serial.println("🛑 Curtain CLOSE | Servo angle: 0");
   }
 
   lastState = on;
+  curtainRunning = on;
 }
 
 void handleSchedulePost()
@@ -574,7 +578,7 @@ void logPumpCompletion(float volume)
 //   if (WiFi.status() == WL_CONNECTED)
 //   {
 //     HTTPClient http;
-//     String url = "http://192.168.137.100/api/pump-command.php?rand=" + String(random(1000, 9999));
+//     String url = "http://192.168.137.73/api/pump-command.php?rand=" + String(random(1000, 9999));
 //     http.begin(url); // Chống cache
 //     int code = http.GET();
 
@@ -1058,7 +1062,7 @@ void sendLedStatusToServer(bool ledOn)
   if (WiFi.status() == WL_CONNECTED)
   {
     HTTPClient http;
-    String url = "http://192.168.137.73/api/pump-command.php"; // Đảm bảo URL này đúng
+    String url = "http:/192.168.137.73//api/pump-command.php"; // Đảm bảo URL này đúng
     http.begin(url);
     http.addHeader("Content-Type", "application/json");
 
@@ -1148,6 +1152,15 @@ void setup()
   // 🚿 Khởi tạo relay & tắt ban đầu
   pinMode(PUMP_RELAY, OUTPUT);
   setPump(false);
+  pinMode(CURTAIN_PIN, OUTPUT);
+  sg90.attach(CURTAIN_PIN);
+
+  Serial.println("Test mở rèm");
+  setCurtain(true);
+  delay(3000);
+
+  Serial.println("Test đóng rèm");
+  setCurtain(false);
 
   // 🧪 TEST relay thủ công
   Serial.println("🧪 TEST: Bật relay 3 giây...");
@@ -1158,7 +1171,8 @@ void setup()
 
   // 🎚️ Cấu hình ADC
   analogReadResolution(12);
-
+  pinMode(CURTAIN_PIN, OUTPUT); // chân servo
+  sg90.attach(CURTAIN_PIN);
   // 📡 Kết nối Wi-Fi
   WiFi.begin(ssid, password);
   Serial.print("📶 Connecting");

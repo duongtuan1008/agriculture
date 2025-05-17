@@ -45,6 +45,8 @@ import androidx.annotation.NonNull;
 import okhttp3.ResponseBody;
 import java.io.IOException;
 import com.google.gson.Gson;
+import android.os.Handler;
+import android.os.Looper;
 
 
 
@@ -56,6 +58,8 @@ public class MainActivity extends AppCompatActivity {
     ImageView iconPump, iconLed;
     private DrawerLayout drawerLayout;
     private ActionBarDrawerToggle toggle;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final int delayMillis = 1000; // 3 giây
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -176,13 +180,32 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 fetchSensorData(); // Gọi lại API lấy dữ liệu mới
-                new android.os.Handler().postDelayed(this, 5000); // Lặp lại sau 5s
+                new android.os.Handler().postDelayed(this, 1000); // Lặp lại sau 5s
                 fetchDeviceStates();
             }
         }, 5000); // Đợi 5s trước lần đầu
 
         // sau khi POST xong
 
+    }
+    private final Runnable fetchRunnable = new Runnable() {
+        @Override
+        public void run() {
+            fetchDeviceStates(); // gọi lấy dữ liệu
+            handler.postDelayed(this, delayMillis); // gọi lại sau 3 giây
+        }
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        handler.post(fetchRunnable); // bắt đầu vòng lặp gọi liên tục
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        handler.removeCallbacks(fetchRunnable); // dừng gọi khi Activity dừng
     }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

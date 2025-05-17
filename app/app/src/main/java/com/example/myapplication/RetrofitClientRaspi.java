@@ -5,7 +5,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class RetrofitClientRaspi {
     // Đường dẫn cơ sở cho API
-    private static final String BASE_URL = "http://192.168.137.100/api/";
+    private static final String BASE_URL = "http://192.168.137.73/api/";
 
     private static Retrofit retrofit = null;
 

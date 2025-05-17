@@ -312,6 +312,7 @@ void readAllSensors()
   // Đọc trạng thái cảm biến lửa
   flameStatus = digitalRead(FLAME_SENSOR_D0) == LOW ? 1 : 0;
 
+  Serial.printf("🔥 Flame status (readAllSensors): %d\n", flameStatus);
   // Giả định bạn đã cập nhật flowRate_Lmin từ ISR
   flowRate = flowRate_Lmin;
 
@@ -652,6 +653,8 @@ void logPumpCompletion(float volume)
 // ✅ Gửi dữ liệu lên server
 void sendSensorData()
 {
+  readAllSensors();
+  Serial.printf("🔥 Flame status (readAllSensors): %d\n", flameStatus);
   if (WiFi.status() == WL_CONNECTED)
   {
     HTTPClient http;
@@ -1251,7 +1254,7 @@ void loop()
   unsigned long now = millis();
 
   // Gửi cảm biến
-  if (now - lastSendTime > 5000)
+  if (now - lastSendTime > 1000)
   {
     sendSensorData();
     lastSendTime = now;
